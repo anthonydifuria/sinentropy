@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sinentropy</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<section class="pane" data-title="sinentropy">
+  <p class="intro">A minimal language for additive synthesis: sum sine oscillators
+    shaped by multi-point envelopes, and watch the spectral entropy of the result &mdash;
+    the Shannon entropy of the normalized power spectrum, a rough measure of how spread
+    out vs. concentrated the sound's frequency content is. Everything runs at audio
+    rate &mdash; no separate control rate.</p>
+  <p class="grammar">sin(freq, amp, phase) * env(v0, t1,v1, t2,v2, ...) &mdash; phase in
+    radians, env is a Csound-style linseg (start value, then time/value pairs, any
+    number of points). let name = expr / [array]. for x in a..b { ... } or
+    for x in array { ... }.</p>
+  <textarea id="code" spellcheck="false" rows="9">let freqs = [220, 277, 330, 415]
+
+for f in freqs {
+  sin(f, 0.2, 0) * env(0, 0.02,1, 0.4,0.5, 0.3,0)
+}
+
+for i in 1..8 {
+  sin(220*i, 1/i, i*0.3) * env(0, 0.01,1, 0.5,0.4, 0.3,0)
+}</textarea>
+  <div class="controls">
+    <button id="run" class="tui-btn">[ Run ]</button>
+    <button id="stop" class="tui-btn">[ Stop ]</button>
+  </div>
+  <div class="status" id="status" aria-live="polite"></div>
+  <div class="entropy-line">spectral entropy: <span id="entropy">0.0000</span></div>
+  <canvas id="spectrum" width="600" height="60" aria-hidden="true"></canvas>
+</section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
