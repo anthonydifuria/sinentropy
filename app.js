@@ -14,8 +14,10 @@
      expr      := term (("+"|"-") term)*
      term      := factor (("*"|"/") factor)*
      factor    := "-" factor | primary
-     primary   := NUMBER | IDENT | "(" expr ")" | arrayLit
+     primary   := primaryBase ("[" expr "]")*
+     primaryBase := NUMBER | IDENT | "(" expr ")" | arrayLit
      arrayLit  := "[" (expr ("," expr)*)? "]"
+   arr[i] indexes into an array, 0-based.
    Everything runs at audio rate: freq/amp/phase are baked into real
    OscillatorNode/AudioParam automation, no separate control rate.
    ========================================================= */
@@ -80,6 +82,16 @@ function parseProgram(src) {
 
   // ---- expressions ----
   function primary() {
+    let node = primaryBase();
+    while (peek() && peek().t === "[") {
+      next();
+      const idx = expr();
+      expect("]");
+      node = { type: "index", array: node, index: idx };
+    }
+    return node;
+  }
+  function primaryBase() {
     const tok = peek();
     if (!tok) throw new Error("Unexpected end of input");
     if (tok.t === "num") { next(); return { type: "num", v: tok.v }; }
@@ -209,6 +221,15 @@ function evalExpr(node, env) {
     }
     case "array":
       return node.items.map(it => evalExpr(it, env));
+    case "index": {
+      const arr = evalExpr(node.array, env);
+      if (!Array.isArray(arr)) throw new Error("Cannot index a non-array value");
+      const idx = Math.round(evalExpr(node.index, env));
+      if (idx < 0 || idx >= arr.length) {
+        throw new Error("Array index " + idx + " out of bounds (length " + arr.length + ")");
+      }
+      return arr[idx];
+    }
     case "binop": {
       const l = evalExpr(node.left, env), r = evalExpr(node.right, env);
       if (Array.isArray(l) || Array.isArray(r)) throw new Error("Arithmetic on arrays is not supported");

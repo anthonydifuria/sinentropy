@@ -21,23 +21,25 @@ sin(freq, amp, phase[, pan]) * env(v0, t1,v1, t2,v2, ...)
   in seconds
 - terms sum automatically; `+` between them is optional, purely cosmetic
 - `let name = expr` / `let name = [a, b, c]` &mdash; variables and arrays
+- `arr[i]` &mdash; index into an array, 0-based
 - `for x in a..b { ... }` &mdash; loop over an integer range
 - `for x in array { ... }` &mdash; loop over an array's elements
 - `#` starts a line comment
 
 ## Example
 
-A detuned chord panned left plus a harmonic series spread across the stereo
-field by loop index, built with a loop:
+A detuned chord swept left&rarr;right by index, plus a harmonic series swept
+right&rarr;left, both built with loops:
 
 ```
 let freqs = [220, 277, 330, 415]
-for f in freqs {
-  sin(f, 0.2, 0, -1) * env(0, 0.02,1, 0.4,0.5, 0.3,0)
+
+for i in 0..3 {
+  sin(freqs[i], 0.2, 0, -1 + i*(2/3)) * env(0, 0.02,1, 0.4,0.5, 0.3,0)
 }
 
 for i in 1..8 {
-  sin(220*i, 1/i, i*0.3, -1 + (i-1)/3.5) * env(0, 0.01,1, 0.5,0.4, 0.3,0)
+  sin(220*i, 1/i, i*0.3, 1 - (i-1)*(2/7)) * env(0, 0.01,1, 0.5,0.4, 0.3,0)
 }
 ```
 
