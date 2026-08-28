@@ -31,4 +31,4 @@ textarea:focus-visible{outline:1px dashed var(--accent); outline-offset:2px}
 .status{min-height:1.3em; color:var(--err); font-size:0.8em}
 .entropy-line{margin:6px 0; font-size:0.9em}
 #entropy{color:var(--accent)}
-canvas{width:100%; height:60px; border:1px solid var(--border); background:#000; margin-top:6px; display:block}
+canvas{width:100%; height:120px; border:1px solid var(--border); background:#000; margin-top:6px; display:block}
