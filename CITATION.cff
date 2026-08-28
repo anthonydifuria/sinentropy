@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+
+title: "sinentropy"
+version: 1.0.0
+date-released: 2026-08-28
+
+authors:
+  - family-names: Di Furia
+    given-names: Anthony
+
+repository-code: https://github.com/anthonydifuria/sinentropy
+url: https://github.com/anthonydifuria/sinentropy
+
+license: MIT
+
+keywords:
+  - additive synthesis
+  - spectral entropy
+  - Shannon entropy
+  - Web Audio API
+  - domain-specific language
+  - sound synthesis
+
+preferred-citation:
+  type: software
+  title: "sinentropy"
+  authors:
+    - family-names: Di Furia
+      given-names: Anthony
+  year: 2026
+  url: https://github.com/anthonydifuria/sinentropy

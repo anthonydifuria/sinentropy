@@ -63,3 +63,7 @@ No build step, no dependencies: plain HTML/CSS/JS on the Web Audio API.
 
 Part of [anthonydifuria.github.io](https://anthonydifuria.github.io) &mdash;
 embedded live on the home page.
+
+## License
+
+MIT &mdash; see [LICENSE](LICENSE). See also [CITATION.cff](CITATION.cff).
