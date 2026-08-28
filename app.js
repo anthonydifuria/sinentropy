@@ -7,9 +7,10 @@
      statement := letStmt | forStmt | termStmt
      letStmt   := "let" IDENT "=" (arrayLit | expr)
      forStmt   := "for" IDENT "in" (expr ".." expr | expr) "{" statement* "}"
-     termStmt  := "sin" "(" expr "," expr "," expr ")" "*"
+     termStmt  := "sin" "(" expr "," expr "," expr ("," expr)? ")" "*"
                   "env" "(" expr ("," expr)+ ")"
-                  -- sin(freq, amp, phase); env(v0, t1,v1, t2,v2, ...)
+                  -- sin(freq, amp, phase[, pan]); env(v0, t1,v1, t2,v2, ...)
+                  -- pan: -1 (left) .. 0 (center) .. 1 (right), defaults to 0
      expr      := term (("+"|"-") term)*
      term      := factor (("*"|"/") factor)*
      factor    := "-" factor | primary
@@ -130,7 +131,9 @@ function parseProgram(src) {
   function termStmt() {
     expectId("sin");
     const sinArgs = argList(3);
-    if (sinArgs.length !== 3) throw new Error("sin(freq, amp, phase) takes exactly 3 arguments");
+    if (sinArgs.length < 3 || sinArgs.length > 4) {
+      throw new Error("sin(freq, amp, phase[, pan]) takes 3 or 4 arguments");
+    }
     expect("*");
     expectId("env");
     const envArgs = argList(3);
@@ -259,8 +262,9 @@ function interpret(program) {
         const freq = evalExpr(st.sin[0], env);
         const amp = evalExpr(st.sin[1], env);
         const phase = evalExpr(st.sin[2], env);
+        const pan = st.sin.length === 4 ? evalExpr(st.sin[3], env) : 0;
         const envValues = st.env.map(n => evalExpr(n, env));
-        voices.push({ freq, amp, phase, points: envPointsFromArgs(envValues) });
+        voices.push({ freq, amp, phase, pan, points: envPointsFromArgs(envValues) });
       }
     }
   }
@@ -299,7 +303,7 @@ function playVoices(voices) {
   stopAll();
   const now = ctx.currentTime;
   let maxEnd = now;
-  voices.forEach(({ freq, amp, phase, points }) => {
+  voices.forEach(({ freq, amp, phase, pan, points }) => {
     const f = Math.max(1, freq);
     const osc = ctx.createOscillator();
     osc.type = "sine";
@@ -318,8 +322,12 @@ function playVoices(voices) {
       g.linearRampToValueAtTime(points[i].value * amp, startAt + points[i].time);
     }
 
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = Math.max(-1, Math.min(1, pan || 0));
+
     osc.connect(gain);
-    gain.connect(master);
+    gain.connect(panner);
+    panner.connect(master);
 
     const endTime = startAt + points[points.length - 1].time + 0.05;
     osc.start(startAt);

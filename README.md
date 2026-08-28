@@ -10,10 +10,12 @@ or open `index.html` here directly (via a local server, or GitHub Pages).
 ## Grammar
 
 ```
-sin(freq, amp, phase) * env(v0, t1,v1, t2,v2, ...)
+sin(freq, amp, phase[, pan]) * env(v0, t1,v1, t2,v2, ...)
 ```
 
-- `sin(freq, amp, phase)` &mdash; frequency in Hz, amplitude, phase in radians
+- `sin(freq, amp, phase, pan)` &mdash; frequency in Hz, amplitude, phase in
+  radians, pan from `-1` (left) to `1` (right); `pan` is optional and
+  defaults to `0` (center)
 - `env(v0, t1,v1, t2,v2, ...)` &mdash; a Csound `linseg`-style envelope: a
   starting value followed by any number of (time, value) pairs, all times
   in seconds
@@ -25,16 +27,17 @@ sin(freq, amp, phase) * env(v0, t1,v1, t2,v2, ...)
 
 ## Example
 
-A detuned chord plus a harmonic series, built with a loop:
+A detuned chord panned left plus a harmonic series spread across the stereo
+field by loop index, built with a loop:
 
 ```
 let freqs = [220, 277, 330, 415]
 for f in freqs {
-  sin(f, 0.2, 0) * env(0, 0.02,1, 0.4,0.5, 0.3,0)
+  sin(f, 0.2, 0, -1) * env(0, 0.02,1, 0.4,0.5, 0.3,0)
 }
 
 for i in 1..8 {
-  sin(220*i, 1/i, i*0.3) * env(0, 0.01,1, 0.5,0.4, 0.3,0)
+  sin(220*i, 1/i, i*0.3, -1 + (i-1)/3.5) * env(0, 0.01,1, 0.5,0.4, 0.3,0)
 }
 ```
 
