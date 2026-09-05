@@ -48,7 +48,7 @@ textarea:focus-visible{outline:1px dashed var(--accent); outline-offset:2px}
 canvas{width:100%; height:240px; border:1px solid var(--border); background:#000; margin-top:6px; display:block}
 
 @media (max-width: 720px){
-  .tracks{flex-direction:column}
+  .tracks{flex-direction:column; align-items:stretch}
   .viz-row{flex-direction:column}
 }
 
