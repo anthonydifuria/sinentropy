@@ -24,9 +24,6 @@
 # AM/tremolo: the amplitude oscillates over time
 ~(440, 0.25 + ~(6,0.15,0), 0) * ^(0, 0.05,1, 3,0.5, 1,0)
 
-# drone with no envelope: sustains until you press Stop
-~(110, 0.12, 0, -0.6)
-
 # deep modulation: freq, amp, phase and pan each have their own oscillator
 ~(~(3,30,0)+180, ~(2,0.1,0)+0.2, ~(1,1,0), ~(0.5,1,0)) * ^(0, 0.3,1, 4,0.4, 2,0)
 
