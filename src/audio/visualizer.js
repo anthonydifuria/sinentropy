@@ -21,10 +21,18 @@ const cctx = canvas.getContext("2d");
 const waveCanvas = document.getElementById("waveform");
 const wctx = waveCanvas.getContext("2d");
 
+// Read the current palette's accent color live (instead of a hardcoded
+// hex) so the spectrum bars and oscilloscope trace follow whatever palette
+// is active -- same source of truth as everything else (see src/palette.js).
+function accentColor() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  return v || "#ffa500";
+}
+
 function drawSpectrum(byteData) {
   const w = canvas.width, h = canvas.height;
   cctx.clearRect(0, 0, w, h);
-  cctx.fillStyle = "#ffa500";
+  cctx.fillStyle = accentColor();
   const n = byteData.length;
   const barW = w / n;
   for (let i = 0; i < n; i++) {
@@ -41,7 +49,7 @@ function drawSpectrum(byteData) {
 function drawWaveform(byteTimeData) {
   const w = waveCanvas.width, h = waveCanvas.height;
   wctx.clearRect(0, 0, w, h);
-  wctx.strokeStyle = "#ffa500";
+  wctx.strokeStyle = accentColor();
   wctx.lineWidth = 1.5;
   wctx.beginPath();
   const n = byteTimeData.length;

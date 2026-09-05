@@ -27,7 +27,7 @@ main{max-width:100%}
 }
 
 textarea{
-  width:100%; background:#000; color:var(--fg); border:1px solid var(--border);
+  width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--border);
   font-family:var(--mono); font-size:0.9em; padding:8px; resize:vertical;
 }
 textarea:focus-visible{outline:1px dashed var(--accent); outline-offset:2px}
@@ -45,7 +45,7 @@ textarea:focus-visible{outline:1px dashed var(--accent); outline-offset:2px}
 /* Spectrum (left) and waveform/oscilloscope (right), sharing one analyser. */
 .viz-row{display:flex; gap:12px}
 .viz-row canvas{flex:1 1 0; min-width:0; width:auto}
-canvas{width:100%; height:240px; border:1px solid var(--border); background:#000; margin-top:6px; display:block}
+canvas{width:100%; height:240px; border:1px solid var(--border); background:var(--bg); margin-top:6px; display:block}
 
 @media (max-width: 720px){
   .tracks{flex-direction:column; align-items:stretch}
@@ -82,10 +82,10 @@ canvas{width:100%; height:240px; border:1px solid var(--border); background:#000
 .manual ul{padding-left:1.3em; margin:0 0 14px}
 .manual li{margin:0 0 6px}
 .manual code{
-  background:#000; border:1px solid var(--border); padding:1px 4px;
+  background:var(--bg); border:1px solid var(--border); padding:1px 4px;
   font-family:var(--mono); font-size:0.9em;
 }
-.manual pre{background:#000; border:1px solid var(--border); padding:10px; overflow-x:auto; margin:0 0 14px}
+.manual pre{background:var(--bg); border:1px solid var(--border); padding:10px; overflow-x:auto; margin:0 0 14px}
 .manual pre code{border:none; padding:0; background:none; font-size:0.85em}
 .manual a{color:var(--link)}
 .manual a:hover{background:var(--link); color:#000}
