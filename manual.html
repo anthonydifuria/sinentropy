@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sinentropy — manual</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<section class="pane" data-title="sinentropy">
+  <div class="manual-page">
+<h1>sinentropy — Language Manual</h1>
+<p>sinentropy is a tiny text-based language for additive synthesis. You type a
+short program describing one or more oscillators (with optional
+Csound-style envelopes), press Run, and it plays in the browser via the Web
+Audio API while a live spectral-entropy meter, spectrum display and
+waveform (oscilloscope) update in real time.</p>
+<p>This manual documents every language feature, in the order you'll likely
+want to learn them, plus a full grammar reference at the end.</p>
+<div class="manual-layout">
+<nav class="manual-toc" aria-label="Contents">
+<strong>Contents</strong>
+<ol>
+<li><a href="#s1">1. Quick start</a></li>
+<li><a href="#s2">2. The oscillator</a></li>
+<li><a href="#s3">3. Envelopes</a></li>
+<li><a href="#s4">4. Signal-rate modulation</a></li>
+<li><a href="#s5">5. Summing terms</a></li>
+<li><a href="#s6">6. Variables and arrays</a></li>
+<li><a href="#s7">7. Random numbers</a></li>
+<li><a href="#s8">8. for loops</a></li>
+<li><a href="#s9">9. Named, reusable sounds</a></li>
+<li><a href="#s10">10. The sequencer</a></li>
+<li><a href="#s11">11. Loops inside seq/overlap</a></li>
+<li><a href="#s12">12. Comments</a></li>
+<li><a href="#s13">13. Running your program</a></li>
+<li><a href="#s14">14. Spectral entropy, spectrum and waveform</a></li>
+<li><a href="#s15">15. How it's built</a></li>
+<li><a href="#s16">16. Grammar reference</a></li>
+<li><a href="#appendix">Appendix: why two spellings?</a></li>
+</ol>
+</nav>
+  <div class="manual">
+<h2><a id="s1"></a>1. Quick start</h2>
+<p>Type a single oscillator and press Run (or the "Run" button):</p>
+<pre><code>sin(440, 0.5, 0)
+</code></pre>
+<p>This plays a 440 Hz sine wave at amplitude 0.5, phase 0, forever (until you
+press Stop) — because there's no envelope, the note simply sustains.</p>
+<p>Add an envelope to make it start and stop on its own:</p>
+<pre><code>sin(440, 0.5, 0) * env(0, 0.05,1, 0.5,0)
+</code></pre>
+<p><code>env(0, 0.05,1, 0.5,0)</code> is a Csound <code>linseg</code>-style envelope: start at 0,
+ramp to 1 over 0.05s, then ramp to 0 over the next 0.5s. The note now has a
+fast attack and a half-second decay, and stops automatically.</p>
+<h2><a id="s2"></a>2. The oscillator: <code>sin(...)</code> / <code>~(...)</code></h2>
+<pre><code>sin(freq, amp, phase[, pan])
+</code></pre>
+<ul>
+<li><strong>freq</strong> — frequency in Hz</li>
+<li><strong>amp</strong> — amplitude (linear, not dB)</li>
+<li><strong>phase</strong> — starting phase, in radians</li>
+<li><strong>pan</strong> — stereo position, from <code>-1</code> (hard left) through <code>0</code> (center,
+  the default) to <code>1</code> (hard right). Optional — omit it and you get <code>0</code>.</li>
+</ul>
+<p><code>sin</code> can also be spelled <code>~</code>. They are exactly the same token — two
+spellings so you can pick whichever reads better in the moment:</p>
+<pre><code>~(440, 0.5, 0)
+</code></pre>
+<h2><a id="s3"></a>3. Envelopes: <code>env(...)</code> / <code>^(...)</code></h2>
+<pre><code>env(v0, t1,v1, t2,v2, t3,v3, ...)
+</code></pre>
+<p>A <code>linseg</code>-style envelope: a starting value <code>v0</code>, followed by any number of
+<code>(time, value)</code> pairs. Each <code>time</code> is a <em>duration in seconds relative to the
+previous point</em>, not an absolute timestamp — so <code>env(0, 0.05,1, 0.5,0)</code>
+means "start at 0, take 0.05s to reach 1, then take another 0.5s to reach
+0" (ending at t = 0.55s total, not t = 0.5s).</p>
+<p><code>env</code> can also be spelled <code>^</code> — same token, two spellings:</p>
+<pre><code>sin(440, 0.5, 0) * ^(0, 0.05,1, 0.5,0)
+</code></pre>
+<p>The envelope is attached to an oscillator with <code>*</code>:</p>
+<pre><code>sin(freq, amp, phase[, pan]) * env(v0, t1,v1, ...)
+</code></pre>
+<p><strong>The envelope is optional.</strong> A bare <code>sin(...)</code>/<code>~(...)</code> with no <code>* env(...)</code>
+sustains at constant amplitude until you press Stop. This is useful for
+drones, pads, or FM/AM modulators that just need to keep oscillating (see
+§4) — they don't need their own envelope if the carrier's envelope is what
+actually shapes the sound.</p>
+<h2><a id="s4"></a>4. Signal-rate modulation (FM / AM / PM / pan)</h2>
+<p>Any of <code>freq</code>, <code>amp</code>, <code>phase</code>, or <code>pan</code> can be another <code>sin(...)</code>/<code>~(...)</code>
+instead of a plain number. That nested oscillator becomes a true
+<strong>audio-rate signal</strong> driving the parameter — not a slow LFO approximation,
+but the same phase-accumulator engine recursively evaluated sample by
+sample. This gives you real frequency modulation (FM), amplitude modulation
+(AM), phase modulation (PM), and even pan modulation, and it nests to any
+depth.</p>
+<p>Frequency modulation with a slow modulator (5 Hz) sweeping ±50 Hz around a
+carrier, itself shaped by an envelope:</p>
+<pre><code>sin(220 + sin(5, 50, 0), 1, 0) * env(0, 0.05,1, 1.5,0)
+</code></pre>
+<p>The same thing with the short aliases, and no envelope on the modulator
+(it just needs to keep oscillating for as long as the carrier's envelope
+runs):</p>
+<pre><code>~(~(5, 50, 0), 1, 0) * ^(0, 0.05,1, 1.5,0)
+</code></pre>
+<p>Numbers and signals can be freely mixed with <code>+ - * /</code>:</p>
+<pre><code>sin(220 + sin(5, 50, 0), 1, 0)
+</code></pre>
+<p>Because this is genuine sample-by-sample evaluation, nesting depth costs
+CPU, not extra audio nodes — the whole modulation tree for one voice runs
+inside a single <code>AudioWorkletNode</code>.</p>
+<h2><a id="s5"></a>5. Summing terms</h2>
+<p>Every top-level oscillator term in your program is summed into the output.
+The <code>+</code> between terms is entirely optional — it's there for readability
+only:</p>
+<pre><code>sin(220, 0.2, 0)
+sin(330, 0.2, 0)
+sin(440, 0.2, 0)
+</code></pre>
+<p>is identical to:</p>
+<pre><code>sin(220, 0.2, 0) +
+sin(330, 0.2, 0) +
+sin(440, 0.2, 0)
+</code></pre>
+<h2><a id="s6"></a>6. Variables and arrays</h2>
+<pre><code>let name = expr
+let name = [a, b, c]
+</code></pre>
+<p><code>let</code> binds a name to a number, an array, or any expression. Arrays are
+indexed with <code>arr[i]</code>, 0-based:</p>
+<pre><code>let freqs = [220, 277, 330, 415]
+sin(freqs[0], 0.2, 0)
+</code></pre>
+<h2><a id="s7"></a>7. Random numbers: <code>rand(...)</code> / <code>randi(...)</code></h2>
+<pre><code>rand(min, max)     # a float, uniformly distributed in [min, max]
+randi(min, max)    # a whole number, min and max both inclusive
+</code></pre>
+<p>Both draw a <strong>fresh number every time that line is actually evaluated</strong> —
+they're not a value you compute once and reuse, they're a dice roll each
+time. That's what makes them useful inside a <code>for</code> loop: every iteration
+gets its own independent draw.</p>
+<p>A single random frequency between 200 and 400 Hz:</p>
+<pre><code>sin(rand(200, 400), 0.4, 0) * env(0, 0.05,1, 0.5,0)
+</code></pre>
+<p>Ten short notes, each at a different random pitch:</p>
+<pre><code>for i in 1..10 {
+  sin(randi(200, 800), 0.15, 0) * env(0, 0.01,1, 0.2,0)
+}
+</code></pre>
+<p><code>rand</code>/<code>randi</code> work anywhere a number is allowed — inside <code>sin(...)</code>,
+inside <code>env(...)</code>, inside an array literal, as a loop bound, mixed into
+arithmetic:</p>
+<pre><code>let freqs = [rand(100,200), rand(200,300), rand(300,400)]
+sin(freqs[0] + rand(-5,5), 0.3, 0)
+</code></pre>
+<p><code>randi(5, 5)</code> (equal bounds) always returns <code>5</code>; non-integer bounds are
+rounded first, so <code>randi(1.2, 4.8)</code> draws a whole number from 1 to 5.
+<code>max</code> must be <code>&gt;= min</code> for both, and neither accepts an oscillator/signal
+as an argument — only plain numbers, since the draw happens once, before
+the sound starts, not sample-by-sample.</p>
+<h2><a id="s8"></a>8. <code>for</code> loops</h2>
+<pre><code>for x in a..b { ... }      # integer range, inclusive of both ends
+for x in array { ... }     # loop over an array's elements
+</code></pre>
+<p>At the top level of a program, a <code>for</code> loop's body is a list of statements
+(oscillators, more <code>let</code>s, nested <code>for</code>s, <code>seq</code>/<code>overlap</code> blocks, calls —
+anything a top-level statement can be):</p>
+<p>A detuned chord swept left→right by index, plus a harmonic series swept
+right→left, both built with loops:</p>
+<pre><code>let freqs = [220, 277, 330, 415]
+
+for i in 0..3 {
+  sin(freqs[i], 0.2, 0, -1 + i*(2/3)) * env(0, 0.02,1, 0.4,0.5, 0.3,0)
+}
+
+for i in 1..8 {
+  sin(220*i, 1/i, i*0.3, 1 - (i-1)*(2/7)) * env(0, 0.01,1, 0.5,0.4, 0.3,0)
+}
+</code></pre>
+<p>Note two limitations: a range <code>a..b</code> only counts <strong>upward</strong> (you can't
+write <code>3..0</code> to count down — build a reversed array instead, see §11), and
+there is no modulo (<code>%</code>) operator.</p>
+<h2><a id="s9"></a>9. Named, reusable sounds: <code>name(params)_{ ... }</code></h2>
+<pre><code>name(p1, p2, ...)_{
+  ...body...
+}
+</code></pre>
+<p>Defines a reusable, <em>parametric</em> sound — pure substitution, no closures. A
+definition's parameters are just names that get replaced with whatever
+values the call passes:</p>
+<pre><code>gianni(f)_{
+  sin(f, 1, 0) * env(0, 0.05,1, 0.2,0)
+}
+
+gianni(220)
+gianni(330)
+</code></pre>
+<p>Each call — <code>gianni(220)</code>, <code>gianni(330)</code> — is one event: every
+<code>sin(...)</code>/<code>~(...)</code> the body contains fires together, using that call's own
+argument values.</p>
+<p>Rules:</p>
+<ul>
+<li><strong>Only definitions at the top level of the program are registered.</strong> A
+  <code>name(...)_{ ... }</code> written inside a <code>for</code> loop, or inside another
+  definition's body, is silently ignored (never registered) — this is
+  intentional: definitions are meant to be a fixed, top-level vocabulary of
+  reusable sounds, not something generated dynamically.</li>
+<li>Because registration happens as a pre-pass over the whole program, order
+  doesn't matter — a definition can be called <em>before</em> it appears later in
+  the file, and it may call itself or another definition.</li>
+<li>Recursion is capped at 64 nested calls, so a call cycle that never
+  bottoms out fails loudly with an error instead of freezing the audio
+  thread.</li>
+<li>A definition's body can itself contain a <code>seq</code>/<code>overlap</code> block (§10) — so
+  calling that name schedules a whole nested pattern at once, not just a
+  single event.</li>
+<li>A definition's body can use <code>rand</code>/<code>randi</code> (§7) — each call to that name
+  gets its own fresh draw.</li>
+</ul>
+<h2><a id="s10"></a>10. The sequencer: <code>seq(hop) { ... }</code> / <code>overlap(hop) { ... }</code></h2>
+<p>This is the tool for anything that isn't "everything starts at t = 0" —
+rhythms, arpeggios, granular textures. Every step inside a <code>seq</code>/<code>overlap</code>
+block fires at its own <strong>sample-accurate scheduled onset</strong>, computed
+entirely inside the audio engine (not with <code>setTimeout</code> or any other
+JS-thread timer, which would drift).</p>
+<pre><code>seq(hop) {
+  step
+  step
+  ...
+}
+</code></pre>
+<p><code>seq</code> and <code>overlap</code> are two spellings of the exact same construct — see
+"Why two names?" below.</p>
+<h3>The hop</h3>
+<p><code>hop</code>, in parentheses, controls the spacing between step onsets. It's
+either:</p>
+<ul>
+<li><strong>a single number</strong> — a constant number of seconds between onsets:
+  <code>seq(0.2) { 220  277  330 }</code></li>
+<li><strong>an array of numbers</strong> — a rhythmic pattern. If there are more steps
+  than hop values, the hop array cycles:
+  <code>seq([0.2, 0.2, 0.4]) { 220  277  330  415  440  494 }</code></li>
+</ul>
+<p>Here step 1 uses hop <code>0.2</code>, step 2 uses <code>0.2</code>, step 3 uses <code>0.4</code>, step 4
+  wraps back around to <code>0.2</code>, and so on.</p>
+<h3>What a step can be</h3>
+<ul>
+<li><strong>A bare frequency number or arithmetic expression</strong> — <code>220</code>, <code>base*1.5</code>,
+  <code>220 + i*10</code>, <code>randi(200,600)</code>. Frequencies only, never note names.</li>
+<li><strong>An array of frequencies</strong> — <code>[220, 277, 330]</code> — fired together as a
+  chord, one voice per frequency, each at reduced amplitude so the chord
+  doesn't clip.</li>
+<li><strong>A full <code>sin(...)</code>/<code>~(...)</code> term</strong>, envelope and all — you get complete
+  control over that one step's sound.</li>
+<li><strong>A <code>name(...)</code> call</strong> — every voice the named sound's body produces
+  fires together at that step's onset.</li>
+<li><strong>A <code>for</code> loop</strong> — see §11.</li>
+</ul>
+<h3>Implicit envelopes and the seq/overlap distinction</h3>
+<p>A <strong>bare number or array step</strong> automatically gets a short implicit
+attack/release envelope that lasts <em>exactly one hop</em> — so plain notes in a
+sequence don't click on and don't spill past their own slot by default.</p>
+<p>A <strong>full <code>sin(...)</code>/<code>~(...)</code> or <code>name(...)</code> step</strong>, by contrast, keeps
+<em>whatever envelope duration it already carries</em> (or none, if you wrote
+none). If that duration is longer than the hop, the note simply rings on
+into the next slot — and the next, if its envelope is longer still.</p>
+<p>That's the entire difference between "seq" and "overlap": <strong>the exact same
+mechanism</strong>, with the outcome depending purely on how each step's own
+duration compares to the hop. Write short hops and short/implicit
+envelopes and you get ordinary rhythmic sequencing. Write a small hop with
+notes whose envelopes deliberately outlast it, and the same mechanism
+produces dense, granular, overlapping textures:</p>
+<pre><code>seq(0.2) {
+  220
+  277
+  330
+  [220, 277, 330]
+}
+
+overlap(0.03) {
+  sin(440, 0.3, 0) * env(0, 0.01,1, 0.15,0)
+  sin(550, 0.3, 0) * env(0, 0.01,1, 0.15,0)
+  sin(660, 0.3, 0) * env(0, 0.01,1, 0.15,0)
+}
+</code></pre>
+<p>The second block's hop is 0.03s but each note's envelope lasts 0.16s, so
+five or six grains are always sounding at once — that's granular synthesis,
+built from nothing but the sequencer you already know.</p>
+<h3>Restrictions</h3>
+<ul>
+<li>A definition (<code>name(...)_{ ... }</code>) cannot be written inside a
+  <code>seq</code>/<code>overlap</code> block. Define your sounds at the top level, then call
+  them as steps.</li>
+<li>A <code>seq</code>/<code>overlap</code> block needs at least one step.</li>
+<li><code>seq</code>/<code>overlap</code> can itself appear inside a <code>name(...)_{ ... }</code> body — so
+  calling that name schedules a whole nested pattern at once (§9).</li>
+</ul>
+<h2><a id="s11"></a>11. Loops inside <code>seq</code>/<code>overlap</code> — arpeggios and repeated patterns</h2>
+<p>A <code>for</code> loop can appear <em>inside</em> a <code>seq</code>/<code>overlap</code> block, wrapped around
+any step type. Each iteration of the loop generates one more step in the
+<strong>same</strong> sequence — it does not start a separate timeline. The shared
+onset clock, and the hop-array cycling index, both keep advancing across
+every iteration exactly as if you'd written each iteration's steps out by
+hand.</p>
+<p>This is your numeric-loop module for arpeggios and repeated patterns. The
+simplest arpeggio — step through a chord's notes in order, using array
+indexing:</p>
+<pre><code>let freqs = [220, 277, 330, 415]
+
+seq(0.15) {
+  for i in 0..3 {
+    freqs[i]
+  }
+}
+</code></pre>
+<p>Repeat the arpeggio several times by nesting another <code>for</code> — nesting works
+to any depth, and each nested level just keeps generating more steps in
+the one sequence:</p>
+<pre><code>seq(0.15) {
+  for rep in 0..3 {
+    for i in 0..3 {
+      freqs[i]
+    }
+  }
+}
+</code></pre>
+<p>This plays 4 full passes of the 4-note arpeggio — 16 steps total, all
+scheduled sample-accurately on one continuous clock.</p>
+<p>Since ranges only count upward and there's no modulo operator (§8), an
+up-down (ping-pong) arpeggio is easiest to write as two arrays, one already
+reversed:</p>
+<pre><code>let up   = [220, 277, 330, 415]
+let down = [415, 330, 277, 220]
+
+seq(0.15) {
+  for i in 0..3 { up[i] }
+  for i in 0..3 { down[i] }
+}
+</code></pre>
+<p>A loop step can be anything a step can be — a bare frequency, a full
+<code>sin(...)</code>/<code>~(...)</code> term with its own envelope, a <code>name(...)</code> call, or a
+random draw:</p>
+<pre><code>blip(f)_{ sin(f, 1, 0) * env(0, 0.02,1, 0.05,0) }
+
+seq(0.1) {
+  for i in 1..8 {
+    blip(110*i)
+  }
+}
+
+overlap(0.05) {
+  for i in 1..40 {
+    randi(150, 900)
+  }
+}
+</code></pre>
+<p>— the first is an 8-partial arpeggio built entirely from one named sound
+and one loop; the second is 40 short random grains, a one-line granular
+cloud.</p>
+<h2><a id="s12"></a>12. Comments</h2>
+<pre><code># this is a comment, to end of line
+</code></pre>
+<h2><a id="s13"></a>13. Running your program</h2>
+<p>The page has two independent editors, Track A and Track B, each with its
+own <strong>Run</strong> and <strong>Stop</strong> button and its own status line. Pressing Run on
+one track parses and plays only that track's code; it never stops or
+restarts the other track. Both tracks' audio is simply mixed together into
+the same output, so you can, for example, run a drone or pad in Track A
+and layer a <code>seq</code>/<code>overlap</code> pattern on top in Track B, starting and
+stopping each independently. Pressing Stop on a track silences only that
+track's voices — instantly, unless you've declared a release time (below).</p>
+<h3>Fading out instead of cutting: <code>let release = ...</code></h3>
+<p>By default, Stop (and pressing Run again while something's still playing)
+cuts whatever's currently sounding immediately — including a drone with no
+envelope, which would otherwise sustain forever. If you'd rather it faded
+out, declare a release time anywhere at the top level of your program:</p>
+<pre><code>let release = 0.4   # seconds
+
+sin(220, 0.5, 0)
+</code></pre>
+<p>With <code>release</code> declared, Stop fades every currently-playing voice on that
+track to silence over that many seconds instead of cutting it — this works
+whether the voice is a drone or already partway through its own <code>env(...)</code>,
+since the fade is a separate multiplier on top of whatever the voice is
+already doing. A voice that hasn't started playing yet when you press Stop
+(still waiting its turn in a long <code>seq</code>/<code>overlap</code>) is simply dropped —
+there's nothing audible to fade, so it never sounds at all rather than
+playing anyway. Pressing Run again behaves the same way toward whatever
+was playing before: the old voices fade out over their own release time
+while the new ones start immediately at full volume, so pressing Run
+repeatedly layers a trail of fading-out generations under each fresh one
+rather than hard-cutting between them. Without <code>let release</code>, both Stop
+and Run behave exactly as before (instant cut) — this is purely opt-in.</p>
+<p><code>release</code> is a plain top-level variable, not new grammar: it's read once,
+right after your program is parsed, so it must be a plain number in
+seconds. If you don't declare it, the release time is 0 (instant, today's
+default).</p>
+<p>While either track is running, the spectral-entropy meter, spectrum
+display and waveform display (§14) update live from the combined signal
+of both tracks.</p>
+<h3>Keyboard shortcuts</h3>
+<p>Typing one of these two-character sequences anywhere in EITHER track's code
+editor removes it and immediately fires that action on THAT track, as if
+you'd pressed its own button (it never affects the other track):</p>
+<ul>
+<li><code>~~</code> — Run, echoing the oscillator's <code>~</code> alias</li>
+<li><code>!!</code> — Stop</li>
+</ul>
+<h2><a id="s14"></a>14. Spectral entropy, spectrum and waveform</h2>
+<p>The number shown while a program plays is the Shannon entropy of the
+normalized power spectrum of the summed signal (both tracks combined): the
+Web Audio <code>AnalyserNode</code>'s FFT is converted from dB to linear magnitude,
+normalized so it sums to 1, then</p>
+<pre><code>H = -Σ p_i · log2(p_i)
+</code></pre>
+<p>normalized again by <code>log2(bins)</code> to a 0–1 range. It's a rough measure of
+how spread across the spectrum vs. how concentrated on a few frequencies
+the sound is — a single sine sits low (~0.19), a spray of 40 partials sits
+high (~0.72).</p>
+<p>It's a read-only readout, not something you dial in: you don't set an
+entropy value, you build a program, and the number tells you where you
+landed. Use it as feedback while you compose &mdash; stack more partials in a
+<code>for</code> loop, add a modulator, detune a chord, and watch the number climb as
+the sound moves from a pure tone toward a dense, noise-like texture; strip
+things back down and watch it fall.</p>
+<p>Next to the spectrum display is a live waveform (oscilloscope) view: the
+same combined signal read as a time-domain snapshot
+(<code>getByteTimeDomainData</code>) instead of a frequency-domain one, so it costs no
+extra audio nodes — it's the same single <code>AnalyserNode</code> powering the
+entropy meter and spectrum bars, just read a second way.</p>
+<h2><a id="s15"></a>15. How it's built (for the curious)</h2>
+<p>Everything is computed sample-by-sample inside a custom <code>AudioWorklet</code> — a
+phase-accumulator oscillator, evaluated recursively for nested modulators.
+Frequency, amplitude, phase, and pan are all true audio-rate signals, not
+<code>AudioParam</code> automation curves, which is what makes genuine through-zero
+FM/AM/PM/pan modulation possible.</p>
+<p>Rather than one <code>AudioWorkletNode</code> per voice, each track uses a single
+persistent node — a "voice pool" — holding a plain JS array of live
+<code>Voice</code> objects (<code>Sine</code>/<code>Envelope</code>/<code>Voice</code>/<code>VoicePoolProcessor</code> classes,
+under <code>src/worklet/</code>). Pressing Run sends that track's newly-interpreted
+voices to its pool node by message instead of creating new nodes, so a
+3-step program and a 300-step program cost the same one node per track. A
+voice not yet due to play costs O(1) per render block, not O(block size) —
+so a program with thousands of far-future scheduled voices stays cheap
+until each one's own turn actually arrives. A voice is dropped from the
+pool's internal list the instant its own envelope ends (or its release
+fade completes) — no lingering node to disconnect, no waiting on the audio
+graph, just one object removed from an array. A <code>seq</code>/<code>overlap</code> step's
+scheduled onset is still passed along as a sample-accurate <code>startOffset</code>,
+so timing never depends on the JS thread.</p>
+<p><code>rand</code>/<code>randi</code> (§7) are resolved once, on the main thread, while your
+program is being interpreted (compiled into the plain numbers the worklet
+receives) — never inside the audio thread's per-sample loop, so they cost
+nothing at playback time.</p>
+<p>No build step, no dependencies: plain HTML/CSS/JS on the Web Audio API,
+split into small, single-purpose files under <code>src/</code> (language:
+tokenizer/parser/compiler/interpreter; audio: engine/visualizer; worklet:
+the four classes above) and loaded via plain <code>&lt;script&gt;</code> tags — no
+bundler, just files in a folder.</p>
+<h2><a id="s16"></a>16. Grammar reference</h2>
+<pre><code>program    := statement*
+statement  := letStmt | forStmt | oscExpr | defStmt | callStmt | seqStmt
+
+letStmt    := &quot;let&quot; IDENT &quot;=&quot; (arrayLit | expr)
+              -- &quot;let release = &lt;seconds&gt;&quot; at the top level is a reserved
+                 convention (not separate grammar): it sets how long
+                 Stop/Run fade out instead of cutting instantly (§13).
+
+forStmt    := &quot;for&quot; IDENT &quot;in&quot; (expr &quot;..&quot; expr | expr) &quot;{&quot; statement* &quot;}&quot;
+
+oscExpr    := SIN &quot;(&quot; expr &quot;,&quot; expr &quot;,&quot; expr (&quot;,&quot; expr)? &quot;)&quot;
+              (&quot;*&quot; ENV &quot;(&quot; expr (&quot;,&quot; expr)+ &quot;)&quot;)?
+              -- SIN is &quot;sin&quot; or &quot;~&quot;; ENV is &quot;env&quot; or &quot;^&quot; (same token, two
+                 spellings each). sin(freq, amp, phase[, pan]); the
+                 * env(...) part is OPTIONAL. pan defaults to 0.
+                 freq/amp/phase/pan can each be a plain expression OR
+                 another oscExpr, nested to any depth.
+
+defStmt    := IDENT &quot;(&quot; (IDENT (&quot;,&quot; IDENT)*)? &quot;)&quot; &quot;_&quot; &quot;{&quot; statement* &quot;}&quot;
+              -- defines a reusable, parametric sound. Pure substitution
+                 (no closures). Only registered at the top level of the
+                 program. May call itself or another def (capped at 64
+                 nested calls).
+
+callStmt   := IDENT &quot;(&quot; (expr (&quot;,&quot; expr)*)? &quot;)&quot;
+              -- plays a previously defined sound; every osc(...) it
+                 contains fires together as one event.
+
+seqStmt    := SEQ &quot;(&quot; expr &quot;)&quot; &quot;{&quot; seqStep* &quot;}&quot;
+              -- SEQ is &quot;seq&quot; or &quot;overlap&quot; (same token, two spellings).
+                 The parenthesized expr is the hop: one number (constant
+                 seconds between step onsets) or an array of numbers (a
+                 rhythmic pattern, cycled if there are more steps than hop
+                 values). Needs at least one step.
+
+seqStep    := oscExpr | callStmt | seqForStmt | expr
+              -- a bare expr must resolve to a frequency (number) or an
+                 array of frequencies (a chord fired together). It gets an
+                 implicit short attack/release envelope lasting exactly
+                 one hop. A defStmt is not allowed inside a seq/overlap
+                 block.
+
+seqForStmt := &quot;for&quot; IDENT &quot;in&quot; (expr &quot;..&quot; expr | expr) &quot;{&quot; seqStep* &quot;}&quot;
+              -- generates a run of steps, one per loop iteration, each
+                 still consuming its own onset (and its own place in a
+                 cycled hop array) in the surrounding seq/overlap. Nests
+                 to any depth.
+
+expr       := term ((&quot;+&quot; | &quot;-&quot;) term)*
+term       := factor ((&quot;*&quot; | &quot;/&quot;) factor)*
+factor     := &quot;-&quot; factor | primary
+primary    := primaryBase (&quot;[&quot; expr &quot;]&quot;)*
+primaryBase := NUMBER | IDENT | &quot;(&quot; expr &quot;)&quot; | arrayLit | oscExpr | randExpr
+randExpr   := (&quot;rand&quot;|&quot;randi&quot;) &quot;(&quot; expr &quot;,&quot; expr &quot;)&quot;
+              -- a fresh random number, drawn right when this line is
+                 evaluated (so a rand(...) written inside a for-loop body
+                 draws a new one every iteration). rand(min,max) is a
+                 float uniformly in [min,max]; randi(min,max) is an
+                 integer, both ends inclusive (rounded if min/max aren't
+                 already whole numbers).
+arrayLit   := &quot;[&quot; (expr (&quot;,&quot; expr)*)? &quot;]&quot;
+</code></pre>
+<p><code>arr[i]</code> indexes into an array, 0-based. <code>+</code> between top-level statements
+(and between seq/overlap steps) is optional and purely cosmetic — terms
+sum automatically. There is no modulo (<code>%</code>) operator and no downward
+(<code>b..a</code>) range.</p>
+<h2><a id="appendix"></a>Appendix: why two spellings for everything?</h2>
+<p><code>sin</code>/<code>~</code>, <code>env</code>/<code>^</code>, and <code>seq</code>/<code>overlap</code> are each exactly one token with
+two spellings — the parser treats them identically. This exists purely for
+readability in the moment: <code>~</code> and <code>^</code> read fast and dense when you're
+sketching or nesting modulators (<code>~(~(5,50,0),1,0) * ^(0,0.05,1,1.5,0)</code>),
+while <code>sin</code>/<code>env</code>/<code>seq</code>/<code>overlap</code> read more clearly in longer, more
+deliberate programs. Use whichever fits what you're writing — you can even
+mix both spellings freely in the same program.</p>
+  </div>
+</div>
+  </div>
+</section>
+</main>
+</body>
+</html>

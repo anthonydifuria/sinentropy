@@ -15,8 +15,17 @@ main{max-width:100%}
   content:attr(data-title); position:absolute; top:-10px; left:8px; padding:0 4px;
   background:var(--bg); color:var(--muted); font-size:0.85em;
 }
-.intro{margin:14px 0 8px; font-size:0.85em; color:var(--fg)}
-.grammar{margin:0 0 12px; font-size:0.75em; color:var(--muted)}
+.intro{margin:14px 0 12px; font-size:0.85em; color:var(--fg)}
+
+/* Two independent tracks, side by side; stack to one column on narrow
+   screens so each editor stays readable rather than squeezed. */
+.tracks{display:flex; gap:12px; align-items:flex-start}
+.track{flex:1 1 0; min-width:0}
+.track-title{
+  margin:0 0 6px; font-size:0.85em; font-weight:normal; color:var(--muted);
+  text-transform:uppercase; letter-spacing:0.05em;
+}
+
 textarea{
   width:100%; background:#000; color:var(--fg); border:1px solid var(--border);
   font-family:var(--mono); font-size:0.9em; padding:8px; resize:vertical;
@@ -25,10 +34,66 @@ textarea:focus-visible{outline:1px dashed var(--accent); outline-offset:2px}
 .controls{margin:10px 0; display:flex; gap:2ch}
 .tui-btn{
   background:transparent; border:none; color:var(--link); font-family:var(--mono);
-  font-size:0.9em; cursor:pointer; padding:4px 2px;
+  font-size:0.9em; cursor:pointer; padding:4px 2px; text-decoration:none; display:inline-block;
 }
 .tui-btn:hover, .tui-btn:focus-visible{background:var(--link); color:#000; outline:none}
 .status{min-height:1.3em; color:var(--err); font-size:0.8em}
 .entropy-line{margin:6px 0; font-size:0.9em}
 #entropy{color:var(--accent)}
-canvas{width:100%; height:120px; border:1px solid var(--border); background:#000; margin-top:6px; display:block}
+.manual-link{margin:10px 0 6px}
+
+/* Spectrum (left) and waveform/oscilloscope (right), sharing one analyser. */
+.viz-row{display:flex; gap:12px}
+.viz-row canvas{flex:1 1 0; min-width:0; width:auto}
+canvas{width:100%; height:240px; border:1px solid var(--border); background:#000; margin-top:6px; display:block}
+
+@media (max-width: 720px){
+  .tracks{flex-direction:column}
+  .viz-row{flex-direction:column}
+}
+
+/* Manual page: same terminal look, narrowed to a readable prose column. */
+.manual-page{max-width:980px; margin:0 auto}
+.manual-page h1{font-size:1.3em; color:var(--accent); margin:0 0 14px}
+.manual-page > p{font-size:0.9em; line-height:1.55; margin:0 0 12px}
+
+/* Sidebar (left) + prose column (right); stacks on narrow screens. */
+.manual-layout{display:flex; align-items:flex-start; gap:28px; margin-top:18px}
+.manual-toc{
+  flex:0 0 210px; min-width:0; position:sticky; top:10px;
+  font-size:0.85em; border-right:1px solid var(--border); padding-right:16px;
+}
+.manual-toc strong{display:block; color:var(--muted); text-transform:uppercase;
+  letter-spacing:0.05em; font-size:0.85em; margin:0 0 10px}
+.manual-toc ol{list-style:none; margin:0; padding:0; counter-reset:none}
+.manual-toc li{margin:0 0 8px; line-height:1.35}
+.manual-toc a{color:var(--link); text-decoration:none}
+.manual-toc a:hover, .manual-toc a:focus-visible{background:var(--link); color:#000}
+
+.manual{max-width:760px; min-width:0; flex:1 1 0}
+.manual h2{
+  font-size:1.05em; color:var(--muted); margin:30px 0 12px;
+  border-bottom:1px solid var(--border); padding-bottom:4px;
+}
+.manual h2:first-child{margin-top:0}
+.manual h3{font-size:0.95em; color:var(--fg); margin:18px 0 8px}
+.manual p, .manual li{font-size:0.9em; line-height:1.55}
+.manual p{margin:0 0 12px}
+.manual ul{padding-left:1.3em; margin:0 0 14px}
+.manual li{margin:0 0 6px}
+.manual code{
+  background:#000; border:1px solid var(--border); padding:1px 4px;
+  font-family:var(--mono); font-size:0.9em;
+}
+.manual pre{background:#000; border:1px solid var(--border); padding:10px; overflow-x:auto; margin:0 0 14px}
+.manual pre code{border:none; padding:0; background:none; font-size:0.85em}
+.manual a{color:var(--link)}
+.manual a:hover{background:var(--link); color:#000}
+
+@media (max-width: 800px){
+  .manual-layout{flex-direction:column}
+  .manual-toc{
+    position:static; border-right:none; border-bottom:1px solid var(--border);
+    padding-right:0; padding-bottom:12px; width:100%;
+  }
+}
