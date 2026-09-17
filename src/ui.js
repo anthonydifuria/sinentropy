@@ -63,6 +63,10 @@ function wireTrack(track, ids) {
       if (codeEl.value.slice(Math.max(0, pos - len), pos) === trig.text) {
         codeEl.value = codeEl.value.slice(0, pos - len) + codeEl.value.slice(pos);
         codeEl.selectionStart = codeEl.selectionEnd = pos - len;
+        // setting .value directly doesn't fire a native "input" event, so
+        // the syntax-highlight overlay (src/highlight.js) needs a nudge or
+        // it'd keep showing the trigger text until the next keystroke.
+        if (window.sinHighlight) window.sinHighlight.refresh(codeEl);
         trig.fire();
         return;
       }

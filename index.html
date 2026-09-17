@@ -13,10 +13,20 @@
   <p class="intro">Additive synthesis in the browser: sum sine oscillators shaped by
     envelopes, and watch the spectral entropy of the result update live.</p>
   <p class="manual-link"><a class="tui-btn" href="manual.html" target="_blank" rel="noopener">[ Manual ]</a></p>
+  <div class="palette-picker" role="group" aria-label="Palette">
+    <button type="button" class="pal-btn" data-pal="pal-default">[default]</button>
+    <button type="button" class="pal-btn" data-pal="pal-contrast-dark">[contrast-dark]</button>
+    <button type="button" class="pal-btn" data-pal="pal-contrast-light">[contrast-light]</button>
+    <button type="button" class="pal-btn" data-pal="pal-sepia">[sepia]</button>
+    <button type="button" class="pal-btn" data-pal="pal-crt">[crt]</button>
+    <button type="button" class="pal-btn" data-pal="pal-by">[by]</button>
+  </div>
   <div class="tracks">
     <div class="track">
       <h2 class="track-title">Track A</h2>
-      <textarea id="code" spellcheck="false" rows="28"># ~/^ aliases, optional envelope, nested modulation on all 4 parameters
+      <div class="code-wrap">
+        <pre class="code-highlight" aria-hidden="true"><code></code></pre>
+        <textarea id="code" class="code-input" spellcheck="false" rows="28"># ~/^ aliases, optional envelope, nested modulation on all 4 parameters
 
 # FM: the carrier is frequency-modulated by another oscillator
 ~(220 + ~(5,80,0), 0.4, 0) * ^(0, 0.05,1, 3,0.6, 1,0)
@@ -28,6 +38,7 @@
 ~(~(3,30,0)+180, ~(2,0.1,0)+0.2, ~(1,1,0), ~(0.5,1,0)) * ^(0, 0.3,1, 4,0.4, 2,0)
 
 # type ~~ for Run, !! for Stop, anywhere in the code</textarea>
+      </div>
       <div class="controls">
         <button id="run" class="tui-btn">[ Run ]</button>
         <button id="stop" class="tui-btn">[ Stop ]</button>
@@ -36,7 +47,9 @@
     </div>
     <div class="track">
       <h2 class="track-title">Track B</h2>
-      <textarea id="code2" spellcheck="false" rows="28"># a second, independent track: its Run/Stop doesn't touch Track A
+      <div class="code-wrap">
+        <pre class="code-highlight" aria-hidden="true"><code></code></pre>
+        <textarea id="code2" class="code-input" spellcheck="false" rows="28"># a second, independent track: its Run/Stop doesn't touch Track A
 
 # an arpeggio via a for loop inside an overlap
 overlap(0.12) {
@@ -46,6 +59,7 @@ overlap(0.12) {
 }
 
 # type ~~ for Run, !! for Stop, anywhere in the code</textarea>
+      </div>
       <div class="controls">
         <button id="run2" class="tui-btn">[ Run ]</button>
         <button id="stop2" class="tui-btn">[ Stop ]</button>
@@ -67,6 +81,7 @@ overlap(0.12) {
 <script src="src/audio/playback-state.js"></script>
 <script src="src/audio/engine.js"></script>
 <script src="src/audio/visualizer.js"></script>
+<script src="src/highlight.js"></script>
 <script src="src/ui.js"></script>
 </body>
 </html>
